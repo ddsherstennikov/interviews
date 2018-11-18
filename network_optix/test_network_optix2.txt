@@ -1,0 +1,57 @@
+#include <iostream>
+#include <mutex>
+#include <queue>
+
+// template of a class of a synchronized queue
+// with methods push & pop
+// push places to the queue end
+// pop gets from the beginning of a queue
+// if q.empty() q.pop() blocks
+
+template<typename T>
+class Queue
+{
+public:
+	T pop();
+    void push(const T& el);
+    
+private:
+    std::mutex qmx_;
+    std::queue<T> q_;
+    std::condition_variable cv_;
+};
+
+
+template<typename T>
+T Queue::pop()
+{
+    std::lock_guard<std::mutex> l(qmx_);
+    
+    if (q_.empty())
+        cv_.wait(l);
+    
+    T res = q_.front();
+    q_.pop();
+    
+    return res;
+}
+
+template<typename T>
+void Queue::push(const T& el)
+{
+    std::lock_guard<std::mutex> l(qmx_);
+    
+	q_.push(std::forward<T>(el));
+    
+    cv_.notify_one();
+}
+
+
+int main()
+{
+    Queue<std::string> q;
+    q.push("hello");
+    
+    return 0;
+}
+
